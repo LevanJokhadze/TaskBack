@@ -14,7 +14,6 @@ class LogoutRequest extends FormRequest
     public function rules()
     {
         return [
-            'username' => 'required|string|max:255',
         ];
     }
 }

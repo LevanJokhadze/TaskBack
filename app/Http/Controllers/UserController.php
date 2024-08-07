@@ -8,18 +8,23 @@ use App\Http\Requests\StoreUserRequest;
 use App\Http\Requests\StorePasswordRequest;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\LogoutRequest;
-
+use App\Http\Requests\SendEmailRequest;
+use App\Http\Requests\CheckTokenRequest;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\OTPmail;
 
 class UserController extends Controller
 {
     public function register(StoreUserRequest $request)
     {
         $username = $request->username;
+        $token = $request->token;
         try {
             $user = User::create([
                 'username' => $username,
+                'otp' => $token,
             ]);
 
             $response = [
@@ -35,51 +40,33 @@ class UserController extends Controller
 
     }
 
-    public function registerPassword(StorePasswordRequest $request, $username)
+    public function sendEmail(SendEmailRequest $request) 
     {
-        $user = User::where('username', $username)->first();
-
-        if (!$user) {
-            return response()->json(['message' => 'User not found'], 404);
-        }
-
-        $user->update([
-            'password' => Hash::make($request->password)
-        ]);
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'message' => 'Password updated successfully',
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
+        $to = $request->username; 
+        $message = $request->href; 
+    
+        $details = [
+            'title' => 'Mail from Laravel',
+            'body' => $message
+        ];
+    
+        Mail::to($to)->send(new OTPmail($details));
+    
+        return response()->json(['message' => 'Email sent successfully'], 200);
     }
 
-    public function login(LoginRequest $request)
+    public function checkToken(CheckTokenRequest $request)
     {
-        if (!Auth::attempt($request->only('username', 'password'))) {
-            return response()->json([
-                'message' => 'Invalid login details'
-            ], 401);
+        $otp = $request->otp;
+    
+        $otpRecord = User::where('otp', $otp)->first();
+    
+        if ($otpRecord) {
+            return response()->json(['message' => 'OTP is valid', "success" => true, "data" => $otpRecord], 200);
+        } else {
+            return response()->json(['message' => 'OTP is invalid'], 404);
         }
-
-        $user = User::where('username', $request['username'])->firstOrFail();
-
-        $token = $user->createToken('auth_token')->plainTextToken;
-
-        return response()->json([
-            'access_token' => $token,
-            'token_type' => 'Bearer',
-        ]);
     }
 
-    public function logout(LogoutRequest $request)
-    {
-        if ($request->username()) {
-            $request->username()->currentAccessToken()->delete();
-        }
 
-        return response()->json(['message' => 'Logged out successfully']);
-    }
 }
