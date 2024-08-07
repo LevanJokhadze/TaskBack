@@ -4,7 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Models\UploadStudent;
 use App\Http\Requests\StoreUploadStudentRequest;
-use App\Http\Requests\UpdateUploadStudentRequest;
 
 class UploadStudentController extends Controller
 {
@@ -31,5 +30,12 @@ class UploadStudentController extends Controller
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    public function index()
+    {
+        $uploads = UploadStudent::all();
+
+        return response()->json($uploads);
     }
 }
